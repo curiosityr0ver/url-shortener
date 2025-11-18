@@ -68,6 +68,24 @@ A production-ready URL shortening service built with Spring Boot 3, Java 21, and
 
 > The Spring Boot app will automatically connect using the same defaults (`url_shortener_app` / `url_shortener` / `change-me`) unless you override `DATABASE_*` environment variables.
 
+**Running ad-hoc SQL queries against the container**
+
+- *PowerShell (note the backticks for line continuation):*
+  ```powershell
+  docker compose exec postgres `
+    psql -U url_shortener_app `
+         -d url_shortener
+  ```
+
+- *Git Bash / WSL / macOS terminal:*
+  ```bash
+  docker compose exec postgres \
+    psql -U url_shortener_app \
+         -d url_shortener
+  ```
+
+Swap `url_shortener_app` / `url_shortener` with the values you configured via `POSTGRES_USER` / `POSTGRES_DB`. Once the `psql` prompt opens you can run any SQL (`SELECT * FROM short_urls;`, `\dt`, etc.) and exit with `\q`.
+
 ### Option B: Manual PostgreSQL install
 
 1. Install/start PostgreSQL and connect as superuser.
