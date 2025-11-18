@@ -29,7 +29,7 @@ public class ShortUrlController {
 
 	@PostMapping
 	public ResponseEntity<ShortUrlResponse> create(@Valid @RequestBody CreateShortUrlRequest request) {
-		ShortUrl created = shortUrlService.createShortUrl(request.destinationUrl(), request.customSlug());
+		ShortUrl created = shortUrlService.createShortUrl(request.destinationUrl(), request.customSlug(), request.expiresAt());
 		return ResponseEntity.status(HttpStatus.CREATED)
 			.body(ShortUrlResponse.from(created, shortUrlService.buildPublicShortUrl(created.getSlug())));
 	}

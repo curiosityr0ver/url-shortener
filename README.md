@@ -10,6 +10,7 @@ A production-ready URL shortening service built with Spring Boot 3, Java 21, and
 - Secure slug generation using `SecureRandom`
 - PostgreSQL persistence via Spring Data JPA (automatic schema management)
 - Transparent redirect endpoint (`GET /{slug}`) that increments hit counters
+- Optional link expiration (`expiresAt`) enforcing `410 Gone` redirects after expiry
 - Detailed REST responses and consistent ProblemDetail error payloads
 - Separate application/test profiles (H2 in-memory database for tests)
 - Configurable base URL and slug length via properties or environment variables
@@ -124,7 +125,7 @@ The service listens on port `8080` by default. Change it via `server.port` in `a
 |--------|----------------------|-------------------------------------------|
 | POST   | `/api/urls`          | Create a short URL                        |
 | GET    | `/api/urls/{slug}`   | Retrieve metadata for a slug              |
-| GET    | `/{slug}`            | Redirect to the long URL (HTTP 308)       |
+| GET    | `/{slug}`            | Redirect to the long URL (HTTP 308) or `410 Gone` if expired |
 
 ### Create Short URL
 
@@ -134,7 +135,8 @@ Content-Type: application/json
 
 {
   "destinationUrl": "https://spring.io/projects",
-  "customSlug": "spring"
+  "customSlug": "spring",
+  "expiresAt": "2025-12-31T23:59:59Z"
 }
 ```
 
@@ -148,7 +150,8 @@ Response `201 Created`:
   "shortUrl": "http://localhost:8080/spring",
   "hitCount": 0,
   "createdAt": "2025-11-18T10:05:33.914Z",
-  "lastAccessedAt": null
+  "lastAccessedAt": null,
+  "expiresAt": "2025-12-31T23:59:59Z"
 }
 ```
 
@@ -187,6 +190,7 @@ Responds with `308 Permanent Redirect` and a `Location` header pointing to the d
 | `created_at`      | TIMESTAMP WITH TIME ZONE  | Auto-set on insert                |
 | `last_accessed_at`| TIMESTAMP WITH TIME ZONE  | Updated on redirect               |
 | `hit_count`       | BIGINT                    | Incremented per redirect          |
+| `expires_at`      | TIMESTAMP WITH TIME ZONE  | Optional expiry; links return `410 Gone` after this instant |
 
 Use pgAdmin’s *View/Edit Data* or run:
 
@@ -217,7 +221,7 @@ Unit/integration tests run against H2 using the `test` profile:
 |---------|-------|-----|
 | `permission denied for schema public` | App user lacks schema privileges | Run the GRANT statements listed in “Database Setup” |
 | `Port 8080 was already in use` | Another process still bound | `netstat -ano | findstr :8080` → `taskkill /PID <pid> /F`, or set `server.port` to a free port |
-| Validation error on POST | Missing/invalid payload fields | Ensure `destinationUrl` starts with `http/https` and custom slugs match `[A-Za-z0-9_-]{3,64}` |
+| Validation error on POST | Missing/invalid payload fields | Ensure `destinationUrl` starts with `http/https`, custom slugs match `[A-Za-z0-9_-]{3,64}`, and `expiresAt` is a future ISO-8601 timestamp |
 | Duplicate slug error | Conflict with existing slug | Choose a different custom slug or omit the field to auto-generate |
 
 ---

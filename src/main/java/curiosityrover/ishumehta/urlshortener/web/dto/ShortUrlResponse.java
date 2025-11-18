@@ -11,7 +11,8 @@ public record ShortUrlResponse(
 	String shortUrl,
 	long hitCount,
 	Instant createdAt,
-	Instant lastAccessedAt
+	Instant lastAccessedAt,
+	Instant expiresAt
 ) {
 
 	public static ShortUrlResponse from(ShortUrl entity, String publicShortUrl) {
@@ -22,7 +23,8 @@ public record ShortUrlResponse(
 			publicShortUrl,
 			entity.getHitCount(),
 			entity.getCreatedAt(),
-			entity.getLastAccessedAt()
+			entity.getLastAccessedAt(),
+			entity.getExpiresAt()
 		);
 	}
 }

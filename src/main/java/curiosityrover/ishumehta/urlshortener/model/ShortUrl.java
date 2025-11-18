@@ -44,11 +44,18 @@ public class ShortUrl {
 	@Column(name = "hit_count", nullable = false)
 	private long hitCount;
 
+	@Column(name = "expires_at")
+	private Instant expiresAt;
+
 	@PrePersist
 	@SuppressWarnings("unused")
 	void onCreate() {
 		createdAt = Instant.now();
 		hitCount = 0L;
+	}
+
+	public boolean isExpired() {
+		return expiresAt != null && Instant.now().isAfter(expiresAt);
 	}
 }
 

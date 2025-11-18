@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import curiosityrover.ishumehta.urlshortener.exception.ShortUrlExpiredException;
 import curiosityrover.ishumehta.urlshortener.exception.ShortUrlNotFoundException;
 import curiosityrover.ishumehta.urlshortener.exception.SlugAlreadyExistsException;
 import curiosityrover.ishumehta.urlshortener.model.ShortUrl;
@@ -35,9 +36,10 @@ public class ShortUrlService {
 
 	@SuppressWarnings("null")
 	@Transactional
-	public ShortUrl createShortUrl(String destinationUrl, String customSlug) {
+	public ShortUrl createShortUrl(String destinationUrl, String customSlug, Instant expiresAt) {
 		String normalizedUrl = normalizeDestinationUrl(destinationUrl);
 		String slug = determineSlug(customSlug);
+		Instant normalizedExpiry = normalizeExpiry(expiresAt);
 
 		if (repository.existsBySlug(slug)) {
 			throw new SlugAlreadyExistsException(slug);
@@ -46,6 +48,7 @@ public class ShortUrlService {
 		ShortUrl shortUrl = ShortUrl.builder()
 			.slug(slug)
 			.destinationUrl(normalizedUrl)
+			.expiresAt(normalizedExpiry)
 			.build();
 
 		try {
@@ -66,6 +69,7 @@ public class ShortUrlService {
 	@Transactional
 	public ShortUrl registerHit(String slug) {
 		ShortUrl shortUrl = getShortUrl(slug);
+		ensureNotExpired(shortUrl);
 		shortUrl.setHitCount(shortUrl.getHitCount() + 1);
 		shortUrl.setLastAccessedAt(Instant.now());
 		return repository.save(shortUrl);
@@ -124,6 +128,23 @@ public class ShortUrlService {
 		}
 		catch (URISyntaxException e) {
 			throw new IllegalArgumentException("Destination URL is invalid");
+		}
+	}
+
+	private Instant normalizeExpiry(Instant expiresAt) {
+		if (expiresAt == null) {
+			return null;
+		}
+		Instant now = Instant.now();
+		if (!expiresAt.isAfter(now)) {
+			throw new IllegalArgumentException("expiresAt must be a future instant");
+		}
+		return expiresAt;
+	}
+
+	private void ensureNotExpired(ShortUrl shortUrl) {
+		if (shortUrl.isExpired()) {
+			throw new ShortUrlExpiredException(shortUrl.getSlug());
 		}
 	}
 }

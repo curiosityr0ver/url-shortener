@@ -10,6 +10,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import curiosityrover.ishumehta.urlshortener.exception.ShortUrlExpiredException;
 import curiosityrover.ishumehta.urlshortener.exception.ShortUrlNotFoundException;
 import curiosityrover.ishumehta.urlshortener.exception.SlugAlreadyExistsException;
 
@@ -28,6 +29,14 @@ public class RestExceptionHandler {
 	public ProblemDetail handleConflict(SlugAlreadyExistsException exception) {
 		ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
 		detail.setTitle("Slug already exists");
+		detail.setDetail(exception.getMessage());
+		return detail;
+	}
+
+	@ExceptionHandler(ShortUrlExpiredException.class)
+	public ProblemDetail handleExpired(ShortUrlExpiredException exception) {
+		ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.GONE);
+		detail.setTitle("Short URL expired");
 		detail.setDetail(exception.getMessage());
 		return detail;
 	}
