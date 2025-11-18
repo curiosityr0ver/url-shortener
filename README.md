@@ -30,12 +30,43 @@ A production-ready URL shortening service built with Spring Boot 3, Java 21, and
 
 1. **JDK 21** (Temurin, Oracle, etc.)
 2. **Maven** (optional, wrapper is included)
-3. **PostgreSQL 16+** (local install or container)
+3. **PostgreSQL 16+** – either a local install **or** the provided Docker container
 4. **pgAdmin** or `psql` (recommended for DB management)
+5. **Docker Desktop / Docker Compose** (only if you prefer running PostgreSQL in a container)
 
 ---
 
 ## Database Setup
+
+### Option A: Docker Compose (recommended)
+
+1. Ensure Docker Desktop (or any Docker Engine) is running.
+2. (Optional) Export your preferred credentials before starting the container (PowerShell example):
+   ```powershell
+   $env:POSTGRES_DB="url_shortener"
+   $env:POSTGRES_USER="url_shortener_app"
+   $env:POSTGRES_PASSWORD="super-secret"
+   $env:POSTGRES_PORT="5432"
+   ```
+3. From the project root run:
+   ```powershell
+   docker compose up -d postgres
+   ```
+   This launches the database defined in `docker-compose.yml`, exposes port `5432`, and stores data inside the named volume `postgres-data`.
+4. Check health/status:
+   ```powershell
+   docker compose ps
+   docker compose logs -f postgres
+   ```
+5. When you are done developing:
+   ```powershell
+   docker compose down       # stop the container
+   docker compose down -v    # stop + delete the persisted volume (warning: wipes data)
+   ```
+
+> The Spring Boot app will automatically connect using the same defaults (`url_shortener_app` / `url_shortener` / `change-me`) unless you override `DATABASE_*` environment variables.
+
+### Option B: Manual PostgreSQL install
 
 1. Install/start PostgreSQL and connect as superuser.
 2. Create database and application role:
@@ -62,7 +93,7 @@ A production-ready URL shortening service built with Spring Boot 3, Java 21, and
 
 ## Configuration
 
-Default configuration lives in `src/main/resources/application.properties`. Update the datasource credentials to match your local database:
+Default configuration lives in `src/main/resources/application.properties`. Each property can be overridden via environment variables; the values below show the defaults that ship with the project:
 
 ```properties
 spring.datasource.url=jdbc:postgresql://localhost:5432/url_shortener
@@ -78,15 +109,15 @@ app.shortener.slug-length=8
 
 ### Environment Variable Overrides
 
-Any property can be overridden via env vars. Common overrides:
+| Property                       | Env Var                | Default                                          |
+|--------------------------------|------------------------|--------------------------------------------------|
+| `spring.datasource.url`        | `DATABASE_URL`         | `jdbc:postgresql://localhost:5432/url_shortener` |
+| `spring.datasource.username`   | `DATABASE_USERNAME`    | `url_shortener_app`                              |
+| `spring.datasource.password`   | `DATABASE_PASSWORD`    | `change-me`                                      |
+| `app.shortener.base-url`       | `SHORTENER_BASE_URL`   | `http://localhost:8080`                          |
+| `app.shortener.slug-length`    | `SHORTENER_SLUG_LENGTH`| `8`                                              |
 
-| Property                       | Env Var              | Default                            |
-|--------------------------------|----------------------|------------------------------------|
-| `spring.datasource.url`        | `DATABASE_URL`       | `jdbc:postgresql://localhost:5432/url_shortener` |
-| `spring.datasource.username`   | `DATABASE_USERNAME`  | `postgres`                         |
-| `spring.datasource.password`   | `DATABASE_PASSWORD`  | `postgres`                         |
-| `app.shortener.base-url`       | `SHORTENER_BASE_URL` | `http://localhost:8080`            |
-| `app.shortener.slug-length`    | `SHORTENER_SLUG_LENGTH` | `8`                            |
+> Tip: when you run `docker compose up`, reuse the same values for both the `POSTGRES_*` variables (container) and `DATABASE_*` variables (Spring Boot) so the application can connect without additional configuration.
 
 Example (PowerShell):
 
