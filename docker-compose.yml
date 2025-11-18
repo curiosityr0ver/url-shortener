@@ -18,6 +18,25 @@ services:
       retries: 5
       start_period: 15s
 
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: url-shortener-app:latest
+    container_name: url-shortener-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-url_shortener}
+      DATABASE_USERNAME: ${POSTGRES_USER:-url_shortener_app}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      SHORTENER_BASE_URL: ${SHORTENER_BASE_URL:-http://localhost:${APP_PORT:-8080}}
+      SHORTENER_SLUG_LENGTH: ${SHORTENER_SLUG_LENGTH:-8}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    restart: unless-stopped
+
 volumes:
   postgres-data:
 

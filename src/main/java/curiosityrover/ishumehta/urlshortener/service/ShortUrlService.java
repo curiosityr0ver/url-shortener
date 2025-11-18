@@ -5,6 +5,8 @@ import java.net.URISyntaxException;
 import java.time.Instant;
 import java.util.Objects;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,8 @@ import curiosityrover.ishumehta.urlshortener.repository.ShortUrlRepository;
 
 @Service
 public class ShortUrlService {
+
+	private static final Logger log = LoggerFactory.getLogger(ShortUrlService.class);
 
 	private final ShortUrlRepository repository;
 	private final SlugGenerator slugGenerator;
@@ -53,6 +57,13 @@ public class ShortUrlService {
 
 		try {
 			ShortUrl persisted = repository.save(shortUrl);
+			log.info(
+				"Created short URL slug='{}' shortUrl='{}' destination='{}' expiresAt={}",
+				persisted.getSlug(),
+				buildPublicShortUrl(persisted.getSlug()),
+				persisted.getDestinationUrl(),
+				normalizedExpiry != null ? normalizedExpiry : "never"
+			);
 			return Objects.requireNonNull(persisted, "Short URL could not be persisted");
 		}
 		catch (DataIntegrityViolationException e) {
@@ -72,7 +83,14 @@ public class ShortUrlService {
 		ensureNotExpired(shortUrl);
 		shortUrl.setHitCount(shortUrl.getHitCount() + 1);
 		shortUrl.setLastAccessedAt(Instant.now());
-		return repository.save(shortUrl);
+		ShortUrl updated = repository.save(shortUrl);
+		log.info(
+			"Hit short URL slug='{}' destination='{}' totalHits={}",
+			updated.getSlug(),
+			updated.getDestinationUrl(),
+			updated.getHitCount()
+		);
+		return updated;
 	}
 
 	public String buildPublicShortUrl(String slug) {

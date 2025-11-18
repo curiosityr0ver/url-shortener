@@ -32,7 +32,7 @@ A production-ready URL shortening service built with Spring Boot 3, Java 21, and
 2. **Maven** (optional, wrapper is included)
 3. **PostgreSQL 16+** – either a local install **or** the provided Docker container
 4. **pgAdmin** or `psql` (recommended for DB management)
-5. **Docker Desktop / Docker Compose** (only if you prefer running PostgreSQL in a container)
+5. **Docker Desktop / Docker Compose** (if you plan to run PostgreSQL and/or the Spring Boot app in containers)
 
 ---
 
@@ -63,6 +63,8 @@ A production-ready URL shortening service built with Spring Boot 3, Java 21, and
    docker compose down       # stop the container
    docker compose down -v    # stop + delete the persisted volume (warning: wipes data)
    ```
+
+> Want to run the Spring Boot application inside Docker as well? See [Run everything via Docker](#run-everything-via-docker-app--database) for a one-command workflow.
 
 > The Spring Boot app will automatically connect using the same defaults (`url_shortener_app` / `url_shortener` / `change-me`) unless you override `DATABASE_*` environment variables.
 
@@ -102,6 +104,7 @@ spring.datasource.password=CHANGE_ME
 
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=false
+spring.jpa.open-in-view=false
 
 app.shortener.base-url=http://localhost:8080
 app.shortener.slug-length=8
@@ -147,6 +150,20 @@ java -jar target/ishumehta-0.0.1-SNAPSHOT.jar
 ```
 
 The service listens on port `8080` by default. Change it via `server.port` in `application.properties` or `SERVER_PORT` env var.
+
+### Run everything via Docker (app + database)
+
+Build the image and start both services (app + PostgreSQL) with a single command:
+
+```powershell
+docker compose up --build app
+```
+
+- The `app` service depends on the `postgres` service, so the database container starts automatically (and waits until it becomes healthy before the app boots).
+- Override ports or credentials by exporting env vars before running compose, e.g. `setx APP_PORT 9090` (host port), `setx POSTGRES_PASSWORD super-secret`.
+- Follow logs with `docker compose logs -f app` (or `postgres`) and stop everything with `docker compose down`. Add `-v` to remove the volume/data.
+
+This workflow is ideal for parity with production-like deployments or for developers who don’t want local Java/Postgres installs.
 
 ---
 
