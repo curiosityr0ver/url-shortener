@@ -1,0 +1,17 @@
+{
+  "properties": [
+    {
+      "name": "app.shortener.base-url",
+      "type": "java.lang.String",
+      "description": "Public-facing base URL used to build full shortened links.",
+      "defaultValue": "http://localhost:8080"
+    },
+    {
+      "name": "app.shortener.slug-length",
+      "type": "java.lang.Integer",
+      "description": "Length of randomly generated slugs when no custom slug is provided.",
+      "defaultValue": 8
+    }
+  ]
+}
+
