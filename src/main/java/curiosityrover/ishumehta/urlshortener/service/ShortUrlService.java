@@ -4,6 +4,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,11 +95,25 @@ public class ShortUrlService {
 	}
 
 	public String buildPublicShortUrl(String slug) {
-		if (!StringUtils.hasText(baseUrl)) {
+		return buildPublicShortUrl(slug, null);
+	}
+
+	public String buildPublicShortUrl(String slug, String requestBaseUrl) {
+		String effectiveBase = StringUtils.hasText(requestBaseUrl) ? requestBaseUrl : baseUrl;
+		if (!StringUtils.hasText(effectiveBase)) {
 			return slug;
 		}
-		String trimmedBase = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+		String trimmedBase = effectiveBase.endsWith("/") ? effectiveBase.substring(0, effectiveBase.length() - 1)
+			: effectiveBase;
 		return trimmedBase + "/" + slug;
+	}
+
+	public Optional<String> getConfiguredBaseUrl() {
+		if (!StringUtils.hasText(baseUrl)) {
+			return Optional.empty();
+		}
+		String trimmedBase = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+		return Optional.of(trimmedBase);
 	}
 
 	private String determineSlug(String requestedSlug) {

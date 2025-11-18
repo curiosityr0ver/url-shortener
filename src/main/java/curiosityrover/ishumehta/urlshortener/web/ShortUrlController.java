@@ -1,7 +1,11 @@
 package curiosityrover.ishumehta.urlshortener.web;
 
+import java.net.URI;
+import java.util.Set;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,6 +25,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 @RestController
@@ -57,10 +62,12 @@ public class ShortUrlController {
 		)
 	})
 	@PostMapping
-	public ResponseEntity<ShortUrlResponse> create(@Valid @RequestBody CreateShortUrlRequest request) {
+	public ResponseEntity<ShortUrlResponse> create(@Valid @RequestBody CreateShortUrlRequest request,
+		HttpServletRequest servletRequest) {
 		ShortUrl created = shortUrlService.createShortUrl(request.destinationUrl(), request.customSlug(), request.expiresAt());
+		String requestBaseUrl = resolveBaseUrl(servletRequest);
 		return ResponseEntity.status(HttpStatus.CREATED)
-			.body(ShortUrlResponse.from(created, shortUrlService.buildPublicShortUrl(created.getSlug())));
+			.body(ShortUrlResponse.from(created, shortUrlService.buildPublicShortUrl(created.getSlug(), requestBaseUrl)));
 	}
 
 	@Operation(
@@ -87,9 +94,46 @@ public class ShortUrlController {
 	@GetMapping("/{slug}")
 	public ShortUrlResponse get(
 		@Parameter(description = "The slug identifier of the short URL", required = true, example = "abc12345")
-		@PathVariable String slug) {
+		@PathVariable String slug,
+		HttpServletRequest servletRequest) {
 		ShortUrl shortUrl = shortUrlService.getShortUrl(slug);
-		return ShortUrlResponse.from(shortUrl, shortUrlService.buildPublicShortUrl(shortUrl.getSlug()));
+		String requestBaseUrl = resolveBaseUrl(servletRequest);
+		return ShortUrlResponse.from(shortUrl, shortUrlService.buildPublicShortUrl(shortUrl.getSlug(), requestBaseUrl));
+	}
+
+	private String resolveBaseUrl(HttpServletRequest request) {
+		return shortUrlService.getConfiguredBaseUrl()
+			.filter(base -> !isLoopbackBase(base))
+			.orElseGet(() -> buildBaseFromRequest(request));
+	}
+
+	private boolean isLoopbackBase(String base) {
+		try {
+			URI uri = URI.create(base);
+			String host = uri.getHost();
+			if (!StringUtils.hasText(host)) {
+				return true;
+			}
+			Set<String> loopbackHosts = Set.of("localhost", "127.0.0.1", "0.0.0.0");
+			return loopbackHosts.contains(host.toLowerCase());
+		}
+		catch (IllegalArgumentException ex) {
+			return false;
+		}
+	}
+
+	private String buildBaseFromRequest(HttpServletRequest request) {
+		String scheme = request.getScheme();
+		String serverName = request.getServerName();
+		int port = request.getServerPort();
+		boolean isDefaultPort = ("http".equalsIgnoreCase(scheme) && port == 80)
+			|| ("https".equalsIgnoreCase(scheme) && port == 443);
+		String contextPath = request.getContextPath();
+		String normalizedContextPath = StringUtils.hasText(contextPath) ? contextPath : "";
+		if (normalizedContextPath.endsWith("/")) {
+			normalizedContextPath = normalizedContextPath.substring(0, normalizedContextPath.length() - 1);
+		}
+		return scheme + "://" + serverName + (isDefaultPort ? "" : ":" + port) + normalizedContextPath;
 	}
 }
 

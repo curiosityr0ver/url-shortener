@@ -120,7 +120,9 @@ app.shortener.slug-length=8
 | `app.shortener.base-url`       | `SHORTENER_BASE_URL`   | `http://localhost:8080`                          |
 | `app.shortener.slug-length`    | `SHORTENER_SLUG_LENGTH`| `8`                                              |
 
-> Tip: when you run `docker compose up`, reuse the same values for both the `POSTGRES_*` variables (container) and `DATABASE_*` variables (Spring Boot) so the application can connect without additional configuration.
+> Notes:
+> - When you run `docker compose up`, reuse the same values for both the `POSTGRES_*` variables (container) and `DATABASE_*` variables (Spring Boot) so the application can connect without additional configuration.
+> - `SHORTENER_BASE_URL` is optional. If you leave it unset **or** set it to a loopback host (`localhost`, `127.0.0.1`, `0.0.0.0`), the service will automatically use the host/IP from the incoming request when building short links. Set it explicitly to pin the base URL (e.g., `https://sho.rt` or your LAN IP).
 
 Example (PowerShell):
 
@@ -164,6 +166,23 @@ docker compose up --build app
 - Follow logs with `docker compose logs -f app` (or `postgres`) and stop everything with `docker compose down`. Add `-v` to remove the volume/data.
 
 This workflow is ideal for parity with production-like deployments or for developers who don’t want local Java/Postgres installs.
+
+### Access the service from another device on the same network
+
+1. **Find the host machine’s LAN IP**
+   - Windows: run `ipconfig` and use the IPv4 address of the active adapter (e.g., `192.168.1.9`).
+2. **Ensure the port is exposed**
+   - By default `APP_PORT=8080`, so the service listens on `http://<host-ip>:8080`.
+   - If you change `APP_PORT`, also update `SHORTENER_BASE_URL` (or rely on the auto-detection described above) so generated links point to the reachable address.
+3. **Allow firewall access**
+   - When Windows prompted you, allow Docker/Java on *Private* networks. You can later adjust this under *Windows Defender Firewall → Allow an app…*.
+4. **Set `SHORTENER_BASE_URL` if you want consistent links**
+   - Example (PowerShell): `setx SHORTENER_BASE_URL "http://192.168.1.9:8080"`.
+   - Restart the compose stack or Spring Boot app so the new value is picked up.
+5. **Test from another device**
+   - From a phone/tablet/laptop on the same Wi‑Fi, open `http://192.168.1.9:8080/swagger-ui.html` or send API calls to `http://192.168.1.9:8080/api/urls`.
+
+If `SHORTENER_BASE_URL` is unset or loopback-only, the service automatically uses the request’s scheme/host/port when returning short URLs, so shared links will still point to the correct LAN address.
 
 ---
 
