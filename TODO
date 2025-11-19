@@ -2,3 +2,4 @@
 - allow expiration properties
 - switching between multiple algorithms
 - enable auth and profiles to allow users to manage all their links
+- enable secure https link generation
